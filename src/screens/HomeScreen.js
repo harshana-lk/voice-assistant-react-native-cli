@@ -1,13 +1,51 @@
 import { View, Text, Image, ScrollView, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Features from '../components/Features';
 import { dummyMessages } from '../constants';
+import Voice from '@react-native-community/voice';
+
 export default function HomeScreen() {
   const [messages,setMessages] = useState(dummyMessages);
   const [recording, setRecording] = useState(false);
   const [speaking, setSpeaking] = useState(true);
+  const [result, setResult] = useState('');
+
+  const speechStartHandler = () => {
+    console.log('voice started');
+  }
+  const speechEndHandler = () => {
+    setRecording(false);
+    console.log('voice ended');
+  }
+  const speechResultsHandler = (e) => {
+    console.log('voice event : ', e);
+    const text = e.value[0];
+    setResult(text);
+  }
+
+  const speechErrorHandler = (e) => {
+    console.log('voice error', e);
+  }
+
+  const startRecording = async() => {
+    setRecording(true);
+    try {
+      await Voice.start('en-GB');
+    } catch (error) {
+      console.log("error : ", error);
+    }
+  }
+
+  const stopRecording = async() => {
+    try {
+      await Voice.stop();
+      setRecording(false);
+    } catch (e) {
+      console.log(e);
+    }
+  }
 
   const clear = () => {
     setMessages([]);
@@ -15,6 +53,21 @@ export default function HomeScreen() {
   const stopSpeaking = () => {
     setSpeaking(false);
   }
+
+  useEffect(() => {
+    // voice handler
+    Voice.onSpeechStart = speechStartHandler;
+    Voice.onSpeechEnd = speechEndHandler;
+    Voice.onSpeechResults = speechResultsHandler;
+    Voice.onSpeechError = speechErrorHandler;
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    }
+  },[])
+
+  // console.log("Results : ", result);
+
   return (
     <View className="flex-1 bg-black">
       <SafeAreaView className="flex-1 flex mx-5">
@@ -83,12 +136,14 @@ export default function HomeScreen() {
         <View className="flex justify-center items-center mb-5">
           {
             recording ? (
-              <TouchableOpacity>
+              <TouchableOpacity
+              onPress={stopRecording}>
                 <Image source={require('../../assets/images/dark-voice.gif')} 
                 style={{width: wp('15%'), height: wp('15%')}}/>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity>
+              <TouchableOpacity
+              onPress={startRecording}>
                 <Image source={require('../../assets/images/dark-record.png')} 
                 style={{width: wp('15%'), height: wp('15%')}}/>
               </TouchableOpacity>
